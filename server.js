@@ -2,7 +2,7 @@ var ejs = require('ejs');
 var express = require('express');
 var app = express.createServer();
 var webRTC = require('webrtc.io').listen(app);
-var sip = require('sip');
+/* var sip = require('sip'); */
 
 app.configure(function(){
 	app.set('port', process.envPORT || 8080);

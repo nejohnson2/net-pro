@@ -9,7 +9,6 @@
     "webrtc.io": "latest",
     "webrtc.io-client": "latest",
     "express": "2.5.6",
-    "ws": "latest",
-    "sip":"latest"
+    "ws": "latest"
   }
 }
