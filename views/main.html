@@ -2,3 +2,19 @@
 <div id="status"><h2>question</h2></div>
 <div id="status"><h2><a href="/video">Emergency</a></h2></div>    
 
+<div id="status"><h2><button onclick="socket()">Socket</button></h2></div>    
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+function socket(){
+  var socket = io.connect('http://localhost');
+
+
+/*
+  socket.on('nick socket on', function () {
+    console.log(data);
+    socket.emit('my other event', { my: 'data' });
+  });
+*/
+};
+</script>
