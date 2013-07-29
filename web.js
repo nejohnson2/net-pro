@@ -54,7 +54,8 @@ app.get('/sip', function(req, res) {
 
 	var dialogs = {};
 	
-	var uri_destination = 'sip:17653474729@50.56.219.107';
+/* 	var uri_destination = 'sip:17653474729@50.56.219.107'; */
+	var uri_destination = 'sip:17653474729@10.0.1.13';
 	
 	function rstring() { return Math.floor(Math.random()*1e6).toString(); }
 	
