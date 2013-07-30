@@ -79,7 +79,7 @@ app.get('/usb', function(req, res) {
 	console.log(command);
 	
  	var child = exec(command, function(error, stdout, stderr){
-		response.send(stdout);
+		res.send(stdout);
 	});
 	
 	res.render('usb.html');
