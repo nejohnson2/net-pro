@@ -9,6 +9,8 @@ var os = require('os');
 
 var io = require('socket.io').listen(app);
 
+var usb = require('usb');
+
 app.configure(function(){
 	app.set('port', process.envPORT || 8080);
 
@@ -44,6 +46,40 @@ app.get('/info', function(req, res) {
 
 app.get('/emerg', function(req, res) {
 	res.render('emerg.html');
+});
+
+app.get('/usb', function(req, res) {
+	
+	//console.log(usb.getDeviceList());
+	
+	if(usb.findByIds("0x046d", "0x0825")){
+		console.log("FOUND DEVICE");
+	}
+	
+	//console.log(usb.findByIds("0x046d", "0x0825"));
+
+	//Logitec USB Camera: VID: 0x046d  PID: 0x0825
+/*
+	var device =  usb.findByIds("0x046d", "0x0825");
+	
+	console.log(device.busNumber);
+	
+	var inter = device.interfaces;
+	
+	console.log(inter);
+	
+	console.log(device.endpoints);	
+	device.open();
+*/
+
+	var command = "sudo service motion start";
+	console.log(command);
+	
+ 	var child = exec(command, function(error, stdout, stderr){
+		response.send(stdout);
+	});
+	
+	res.render('usb.html');
 });
 
 app.get('/socket', function(req, res) {
