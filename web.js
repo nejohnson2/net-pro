@@ -7,6 +7,9 @@ var sip = require('sip');
 var util = require('util');
 var os = require('os');
 
+var sys = require('sys')
+var exec = require('child_process').exec;
+
 var io = require('socket.io').listen(app);
 
 var usb = require('usb');
