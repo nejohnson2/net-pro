@@ -3,7 +3,6 @@ var express = require('express');
 var app = express.createServer();
 var webRTC = require('webrtc.io').listen(app);
 var sip = require('sip');
-/* var sip = require('sip'); */
 var util = require('util');
 var os = require('os');
 
@@ -13,6 +12,11 @@ var exec = require('child_process').exec;
 var io = require('socket.io').listen(app);
 
 var usb = require('usb');
+
+/******************* JSSIP *************************/
+
+
+/******************* edn jssip **********************/
 
 app.configure(function(){
 	app.set('port', process.envPORT || 8080);
@@ -50,7 +54,15 @@ app.get('/info', function(req, res) {
 app.get('/emerg', function(req, res) {
 	res.render('emerg.html');
 });
-
+app.get('/sipHTML', function(req, res) {
+	res.render('siphtml.html');
+});
+app.get('/sipjs', function(req, res) {
+	res.render('sipjs.html');
+});
+app.get('/html5sockets', function(req, res) {
+	res.render('html5sockets.html', {layout:false});
+});
 app.get('/usb', function(req, res) {
 	
 	//console.log(usb.getDeviceList());
@@ -89,33 +101,44 @@ app.get('/socket', function(req, res) {
 	res.render('socket.html');
 });
 
+app.get('/jssip', function(req, res) {
+	
+	res.render('jssip.html');
+});
+
+
+
 app.get('/sip', function(req, res) {
+
+	var emitter = new (require('events').EventEmitter)();
 
 	var dialogs = {};
 	
-/* 	var uri_destination = 'sip:17653474729@50.56.219.107'; */
-	var uri_destination = 'sip:17653474729@10.0.1.13';
+	var uri_destination = 'sip:17653474729@50.56.219.107';
+/* 	var uri_destination = 'sip:17653474729@10.0.1.13'; */
 	
 	function rstring() { return Math.floor(Math.random()*1e6).toString(); }
 	
 	
-	//starting stack
+	//starting stack -- this executs when it reeives something
 	sip.start({}, function(rq) {
+		console.log("RQ : " + rq);
 	  if(rq.headers.to.params.tag) { // check if it's an in dialog request
 	    var id = [rq.headers['call-id'], rq.headers.to.params.tag, rq.headers.from.params.tag].join(':');
-	    
+	    console.log("id -- " + id);
 	    if(dialogs[id])
 	      dialogs[id](rq);
 	    else
 	      sip.send(sip.makeResponse(rq, 481, "Call doesn't exists"));
 	  }
 	  else
+	  	  	console.log("Else")
 	    sip.send(sip.makeResponse(rq, 405, 'Method not allowed'));
 	});
 	
 	
 	// Making the call
-	
+/* 	try{ */
 	sip.send({
 	  method: 'INVITE',
 	  uri: uri_destination, //sip:<extension>@<ip address>
@@ -125,9 +148,24 @@ app.get('/sip', function(req, res) {
 	    'call-id': rstring(),
 	    cseq: {method: 'INVITE', seq: Math.floor(Math.random() * 1e5)},
 	    'content-type': 'application/sdp',
-	    contact: [{uri: 'sip:101@' + os.hostname()}]  // if your call doesnt get in-dialog request, maybe os.hostname() isn't resolving in your ip address
+//	    contact: [{uri: 'sip:101@' + os.hostname()}]  // if your call doesnt get in-dialog request, maybe os.hostname() isn't resolving in your ip address
+   	    contact: [{uri: 'sip:101@127.0.0.1'}]
 	  },
 	  content:
+	    'v=0\r\n'+
+	    'o=- 13374 13374 IN IP4 172.16.2.2\r\n'+
+	    's=-\r\n'+
+	    'c=IN IP4 172.16.2.2\r\n'+
+	    't=0 0\r\n'+
+	    'm=video 524288 RTP/AVP 0 8 101\r\n'+
+	    'a=rtpmap:0 PCMU/9000\r\n'+
+	    'a=rtpmap:8 PCMA/9000\r\n'+
+	    'a=rtpmap:101 telephone-event/9000\r\n'+
+	    'a=fmtp:101 0-15\r\n'+
+	    'a=ptime:30\r\n'+
+	    'a=sendrecv\r\n'	  
+
+/* 		//Original 
 	    'v=0\r\n'+
 	    'o=- 13374 13374 IN IP4 172.16.2.2\r\n'+
 	    's=-\r\n'+
@@ -140,53 +178,72 @@ app.get('/sip', function(req, res) {
 	    'a=fmtp:101 0-15\r\n'+
 	    'a=ptime:30\r\n'+
 	    'a=sendrecv\r\n'
+*/
 	},
 	function(rs) {
-	  if(rs.status >= 300) {
-	    console.log('call failed with status ' + rs.status);  
-	  }
-	  else if(rs.status < 200) {
-	    console.log('call progress status ' + rs.status);
-	  }
-	  else {
-	    // yes we can get multiple 2xx response with different tags
-	    console.log('call answered with tag ' + rs.headers.to.params.tag);
-	    
-	    // sending ACK
-	    sip.send({
-	      method: 'ACK',
-	      uri: rs.headers.contact[0].uri,
-	      headers: {
-	        to: rs.headers.to,
-	        from: rs.headers.from,
-	        'call-id': rs.headers['call-id'],
-	        cseq: {method: 'ACK', seq: rs.headers.cseq.seq},
-	        via: []
-	      }
-	    });
-	
-	    var id = [rs.headers['call-id'], rs.headers.from.params.tag, rs.headers.to.params.tag].join(':');
-	
-	    // registring our 'dialog' which is just function to process in-dialog requests
-	    if(!dialogs[id]) {
-	      dialogs[id] = function(rq) {
-	        if(rq.method === 'BYE') {
-	          console.log('call received bye');
-	
-	          delete dialogs[id];
-	
-	          sip.send(sip.makeResponse(rq, 200, 'Ok'));
-	        }
-	        else {
-	          sip.send(sip.makeRespinse(rq, 405, 'Method not allowed'));
-	        }
-	      }
-	    }
-	  }
+/* 		if(err) throw err; */
+		  if(rs.status >= 300) {
+		    console.log('call failed with status ' + rs.status);  
+		  }
+		  else if(rs.status < 200) {
+		    console.log('call progress status ' + rs.status);
+		  }
+		  else {
+		    // yes we can get multiple 2xx response with different tags
+		    console.log('call answered with tag ' + rs.headers.to.params.tag);
+		    
+		    // sending ACK
+		    try {
+		    sip.send({
+		      method: 'ACK',
+		      uri: rs.headers.contact[0].uri,
+		      headers: {
+		        to: rs.headers.to,
+		        from: rs.headers.from,
+		        'call-id': rs.headers['call-id'],
+		        cseq: {method: 'ACK', seq: rs.headers.cseq.seq},
+		        via: []
+		      }
+		    }, function(err) {
+			    if(err) throw err;
+			    res.render("main.html")
+		    });
+		    } catch(err) {
+			    console.log("internal sip.send function" + err);
+		    }
+		    try{
+		    var id = [rs.headers['call-id'], rs.headers.from.params.tag, rs.headers.to.params.tag].join(':');
+		    console.log("id:"+id);
+		    
+		    // registring our 'dialog' which is just function to process in-dialog requests
+		    if(!dialogs[id]) {
+		      dialogs[id] = function(rq) {
+		        if(rq.method === 'BYE') {
+		          console.log('call received bye');
+		
+		          delete dialogs[id];
+		
+		          sip.send(sip.makeResponse(rq, 200, 'Ok'));
+		          res.redirect('/');
+		        }
+		        else {
+		          sip.send(sip.makeRespinse(rq, 405, 'Method not allowed'));
+		        }
+		      }
+		    }
+		    } catch(err) {
+			    console.log("yo err" + err);
+		    }
+		  }
 	});
-
+/*
+	} catch(err) {
+		console.log(err);
+	}
+*/
 //	res.render('sip.html');
 });
+
 
 webRTC.rtc.on('connect', function(rtc) {
   //Client connected
@@ -247,6 +304,9 @@ io.sockets.on('connection', function (socket) {
     });
 });
 
+process.on('uncaughtException', function(err) {
+  console.error(err.stack);
+});
 
 var port = process.env.PORT || 8080;
 app.listen(port, function(){

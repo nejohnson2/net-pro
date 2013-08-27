@@ -1,0 +1,42 @@
+<!--
+ SIPml5 is a client side way of making phone calls.
+ In order to actually make a call to asterisk, you need to 
+ use the webrtc2sip server side thing and have it configured
+ with asterisk.  Webrtc2sip is the middle man which handles
+ the codec stuff.
+-->
+
+<h2>SIP HTML</h2>
+<p>Making a phone call to 765.430.7001</p>
+<audio id="audio_remote" autoplay="autoplay" /> 
+<script>
+
+var eventsListener = function(e){
+    console.info('session event = ' + e.type);
+}
+SIPml.init(
+    function(e){
+        var stack =  new SIPml.Stack({
+        	realm: 'example.org', 
+        	impi: 'bob',
+        	impu: 'sip:bob@example.org',
+        	password: 'mysecret',
+        	display_name: 'Bob legend',
+            events_listener: { events: 'started', listener: function(e){
+                        var callSession = stack.newSession('call-audio', {
+/*
+                                video_local: document.getElementById('video-local'),
+                                video_remote: document.getElementById('video-remote'),
+*/
+                                audio_remote: document.getElementById('audio-remote'),
+                                events_listener: { events: '*', listener: eventsListener }
+                            });
+                        callSession.call('sip:17653474729@50.56.219.107');
+                    } 
+                }
+        });
+        stack.start();
+    }
+);
+</script>
+
